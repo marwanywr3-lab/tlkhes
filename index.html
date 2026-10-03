@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المُلخِّص الذكي | تحليل المستندات والدردشة التفاعلية</title>
+
+  <!-- Tailwind CSS & Google Fonts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Tajawal', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            warm: {
+              50: '#FAF8F5',
+              100: '#F5EFE6',
+              200: '#E8DEC8',
+              300: '#D8C7A5',
+              400: '#C2AC82',
+              500: '#9E8256',
+              600: '#7D633D',
+              700: '#5C4729',
+              800: '#3D2D18',
+              900: '#21170A',
+            },
+            terracotta: {
+              DEFAULT: '#C15C3D',
+              hover: '#A94A2D',
+              light: '#F8ECE8',
+            },
+            parchment: '#FBF9F4',
+            surface: '#FFFFFF',
+            borderWarm: '#E5DACB',
+          },
+          boxShadow: {
+            warm: '0 4px 20px -2px rgba(92, 71, 41, 0.06)',
+            soft: '0 2px 10px rgba(0, 0, 0, 0.03)',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* لمسات تنسيق مخصصة للطابع الهادئ */
+    body {
+      background-color: #FAF8F5;
+      color: #3D2D18;
+      font-family: 'Tajawal', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(229, 218, 203, 0.2);
+      border-radius: 8px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #D8C7A5;
+      border-radius: 8px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #C2AC82;
+    }
+
+    /* نبض خفيف للمؤشرات */
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.02); }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 3s infinite ease-in-out;
+    }
+
+    /* تأثير إخفاء شريط التمرير للأجهزة اللمسية مع إمكانية التمرير */
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col overflow-x-hidden selection:bg-terracotta selection:text-white">
+
+  <!-- إشعار التنبيه اللحظي (Toast Notification) -->
+  <div id="toastNotification" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform -translate-y-20 opacity-0 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-2xl shadow-warm border text-sm font-medium">
+    <span id="toastIcon" class="text-lg"></span>
+    <span id="toastMessage"></span>
+  </div>
+
+  <!-- ترويسة التطبيق (Header) -->
+  <header class="sticky top-0 z-40 bg-warm-50/90 backdrop-blur-md border-b border-borderWarm transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- الشعار والعنوان -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-terracotta/10 border border-terracotta/20 flex items-center justify-center text-terracotta font-bold text-lg shadow-soft">
+          <span>س</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-base sm:text-lg text-warm-800 leading-tight">المُلخِّص الذكي</h1>
+            <span class="hidden sm:inline-flex text-[11px] font-semibold bg-terracotta-light text-terracotta px-2 py-0.5 rounded-full border border-terracotta/20">Gemini 3.5 & 3.8</span>
+          </div>
+          <p class="text-[11px] text-warm-500 hidden sm:block">منصة تحليل المستندات الضخمة حتى 400 ميغابايت والمحادثة التفاعلية</p>
+        </div>
+      </div>
+
+      <!-- إعدادات النماذج والروابط السريعة -->
+      <div class="flex items-center gap-2 sm:gap-4">
+        <!-- اختيار النموذج السحابي الافتراضي -->
+        <div class="flex items-center gap-2 bg-warm-100 border border-borderWarm rounded-xl px-2.5 py-1 text-xs text-warm-700">
+          <label for="headerModelSelect" class="hidden md:inline font-medium text-warm-600">المحرك:</label>
+          <select id="headerModelSelect" class="bg-transparent text-warm-800 font-semibold focus:outline-none cursor-pointer">
+            <option value="gemini-3.8-flash">Gemini 3.8 Flash (تلخيص معمق)</option>
+            <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (فائق السرعة)</option>
+          </select>
+        </div>
+
+        <!-- حالة اتصال الخادم -->
+        <div id="serverStatusBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-warm-100 border border-borderWarm text-[11px] text-warm-600 font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="hidden sm:inline">الخادم متصل</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- محتوى التطبيق الرئيسي (Main Workspace) -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+
+    <!-- شريط معلومات الجلسة النشطة (عند وجود ملف معالج) -->
+    <div id="activeSessionBanner" class="hidden bg-warm-100/70 border border-borderWarm rounded-2xl p-4 flex-wrap items-center justify-between gap-3 text-xs text-warm-700 transition-all">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-warm-200 flex items-center justify-center text-warm-700 text-sm">📄</div>
+        <div>
+          <span class="font-bold text-warm-800 text-sm" id="bannerFileName">وثيقة غير معنونة</span>
+          <div class="flex items-center gap-2 mt-0.5 text-warm-600">
+            <span id="bannerFileSize">0 MB</span>
+            <span>•</span>
+            <span id="bannerMimeType">PDF</span>
+            <span>•</span>
+            <span>الإصدار: <strong id="bannerRevisionCount">1</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="terminateCurrentSession()" class="px-3 py-1.5 rounded-xl border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition-colors font-medium">
+          إنهاء الجلسة وحذف الموارد
+        </button>
+      </div>
+    </div>
+
+    <!-- شبكة مساحة العمل (Work Area Grid) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+
+      <!-- العمود الأيمن: الرفع، الإعدادات، والملخص المعتمد (7 أعمدة) -->
+      <section class="lg:col-span-7 flex flex-col gap-6 w-full">
+        
+        <!-- بطاقة رفع المستندات والإعدادات (Upload Card) -->
+        <div class="bg-surface border border-borderWarm rounded-3xl p-5 sm:p-6 shadow-soft transition-all">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-bold text-warm-800">رفع مستند جديد للتحليل</h2>
+              <p class="text-xs text-warm-500 mt-0.5">يدعم PDF، الصور، المذكرات، والملفات النصية حتى 400 ميغابايت</p>
+            </div>
+            <span class="text-[11px] font-mono bg-warm-100 text-warm-600 px-2.5 py-1 rounded-lg border border-borderWarm">Max 400MB</span>
+          </div>
+
+          <!-- منطقة السحب والإفلات -->
+          <div id="dropZone" class="border-2 border-dashed border-borderWarm hover:border-terracotta/60 bg-parchment rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 group">
+            <input type="file" id="fileInput" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.txt,.md,.markdown,.csv,.json">
+            
+            <div id="dropZoneEmpty">
+              <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-warm-100 group-hover:bg-terracotta-light group-hover:text-terracotta text-warm-600 flex items-center justify-center text-xl transition-all">
+                📂
+              </div>
+              <p class="text-sm font-bold text-warm-800">اسحب الملف وأفلته هنا، أو <span class="text-terracotta underline">تصفح من جهازك</span></p>
+              <p class="text-xs text-warm-500 mt-1">تتم المعالجة عبر Google Files API بأمان تام دون ضغط جودة المستند</p>
+            </div>
+
+            <!-- عرض الملف المحدد -->
+            <div id="dropZoneSelected" class="hidden flex items-center justify-between gap-3 text-right bg-surface border border-borderWarm p-3.5 rounded-xl">
+              <div class="flex items-center gap-3 overflow-hidden">
+                <span class="text-2xl" id="selectedFileIcon">📑</span>
+                <div class="truncate">
+                  <p class="text-xs font-bold text-warm-800 truncate" id="selectedFileName">filename.pdf</p>
+                  <p class="text-[11px] text-warm-500" id="selectedFileSize">0 MB</p>
+                </div>
+              </div>
+              <button type="button" onclick="clearSelectedFile(event)" class="text-xs text-warm-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-warm-100 transition-colors">
+                إلغاء ✖
+              </button>
+            </div>
+          </div>
+
+          <!-- إعدادات وتخصيص نمط التلخيص -->
+          <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="summaryModeSelect" class="block text-xs font-semibold text-warm-700 mb-1.5">نمط التلخيص المطلوب:</label>
+              <select id="summaryModeSelect" class="w-full bg-parchment border border-borderWarm text-warm-800 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-terracotta transition-colors">
+                <option value="executive">ملخص تنفيذي (استراتيجي ومركز)</option>
+                <option value="detailed">ملخص تحليلي مفصل (شامل لكل الفصول)</option>
+                <option value="bullets">نقاط سريعة ومكثفة (Bullet Points)</option>
+                <option value="academic">ملخص أكاديمي رصين (منهجية ونتائج)</option>
+                <option value="actionable">خطة مهام وخطوات عمل (Action Items)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="customTitleInput" class="block text-xs font-semibold text-warm-700 mb-1.5">عنوان المستند (اختياري):</label>
+              <input type="text" id="customTitleInput" placeholder="أدخل اسماً مخصصاً للوثيقة..." class="w-full bg-parchment border border-borderWarm text-warm-800 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-terracotta transition-colors placeholder:text-warm-400">
+            </div>
+          </div>
+
+          <!-- تعليمات إضافية مخصصة -->
+          <div class="mt-3">
+            <label for="customInstructions" class="block text-xs font-semibold text-warm-700 mb-1.5">توجيهات إضافية للذكاء الاصطناعي (اختياري):</label>
+            <input type="text" id="customInstructions" placeholder="مثال: ركز على القرارات المالية، أو اذكر أسماء المسؤولين بالتحديد..." class="w-full bg-parchment border border-borderWarm text-warm-800 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-terracotta transition-colors placeholder:text-warm-400">
+          </div>
+
+          <!-- شريط تقدم الرفع والتحليل -->
+          <div id="uploadProgressContainer" class="hidden mt-4 pt-3 border-t border-borderWarm">
+            <div class="flex items-center justify-between text-xs text-warm-600 mb-1.5">
+              <span id="uploadProgressText">جارٍ الرفع والمعالجة...</span>
+              <span id="uploadProgressPercent" class="font-mono font-bold text-terracotta">0%</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-warm-100 overflow-hidden">
+              <div id="uploadProgressBar" class="h-full bg-terracotta transition-all duration-300 w-0"></div>
+            </div>
+          </div>
+
+          <!-- زر بدء التلخيص -->
+          <div class="mt-5 flex justify-end">
+            <button id="startSummarizeBtn" onclick="handleStartProcess()" class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-terracotta hover:bg-terracotta-hover text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-warm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              <span>بدء الرفع والتحليل الذكي</span>
+              <span>⚡</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- بطاقة عرض الملخص المعتمد (Summary Output Card) -->
+        <div class="bg-surface border border-borderWarm rounded-3xl p-5 sm:p-6 shadow-soft flex flex-col flex-1 min-h-[420px]">
+          <!-- ترويسة بطاقة الملخص وأزرار الإجراءات -->
+          <div class="flex flex-wrap items-center justify-between pb-3.5 border-b border-borderWarm gap-2">
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-base text-warm-800">الملخص المعتمد للوثيقة</h3>
+              <span id="summaryBadgeMode" class="text-[10px] bg-warm-100 text-warm-700 px-2 py-0.5 rounded-md font-medium hidden">تنفيذي</span>
+            </div>
+
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button onclick="copySummaryToClipboard()" title="نسخ التلخيص" class="px-2.5 py-1.5 rounded-xl border border-borderWarm bg-parchment hover:bg-warm-100 text-warm-700 text-xs font-medium transition-colors flex items-center gap-1">
+                <span>📋</span>
+                <span class="hidden sm:inline">نسخ</span>
+              </button>
+              <button onclick="exportSummaryFile('markdown')" title="تصدير كملف Markdown" class="px-2.5 py-1.5 rounded-xl border border-borderWarm bg-parchment hover:bg-warm-100 text-warm-700 text-xs font-medium transition-colors flex items-center gap-1">
+                <span>📥</span>
+                <span>MD</span>
+              </button>
+              <button onclick="exportSummaryFile('text')" title="تصدير كملف نصي Text" class="px-2.5 py-1.5 rounded-xl border border-borderWarm bg-parchment hover:bg-warm-100 text-warm-700 text-xs font-medium transition-colors flex items-center gap-1">
+                <span>📄</span>
+                <span>TXT</span>
+              </button>
+              <button onclick="promptRegenerateSummary()" title="إعادة توليد التلخيص بنمط آخر" class="px-2.5 py-1.5 rounded-xl border border-terracotta/30 text-terracotta bg-terracotta-light hover:bg-terracotta/10 text-xs font-medium transition-colors flex items-center gap-1">
+                <span>🔄</span>
+                <span class="hidden sm:inline">إعادة توليد</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- مساحة محتوى التلخيص -->
+          <div id="summaryContentArea" class="mt-4 flex-1 text-sm leading-relaxed text-warm-800 whitespace-pre-wrap custom-scroll overflow-y-auto max-h-[550px] pr-1">
+            <div class="h-64 flex flex-col items-center justify-center text-center text-warm-400 p-6">
+              <span class="text-4xl mb-3">📑</span>
+              <p class="font-medium text-sm text-warm-600">لم يتم تلخيص أي مستند حتى الآن</p>
+              <p class="text-xs text-warm-400 mt-1 max-w-sm">قم برفع مستند بحجم حتى 400 ميغابايت في الصندوق أعلاه وسيقوم النموذج بتحليله واستخراج عصارته هنا بدقة.</p>
+            </div>
+          </div>
+
+          <!-- تذييل بطاقة الملخص (معلومات النموذج والتوكنز) -->
+          <div id="summaryFooterMeta" class="hidden mt-4 pt-3 border-t border-borderWarm flex flex-wrap items-center justify-between text-[11px] text-warm-500">
+            <span id="metaModelUsed">النموذج: -</span>
+            <span id="metaGenerationTime">وقت التوليد: -</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- العمود الأيسر: الشات بوت التفاعلي الذكي (5 أعمدة) -->
+      <section class="lg:col-span-5 bg-surface border border-borderWarm rounded-3xl p-5 sm:p-6 shadow-soft flex flex-col h-[650px] lg:h-[840px] sticky top-24">
+        
+        <!-- ترويسة نافذة المحادثة -->
+        <div class="pb-3 border-b border-borderWarm flex items-center justify-between gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-sm sm:text-base text-warm-800">المساعد التفاعلي للمستند</h3>
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            </div>
+            <p class="text-[11px] text-warm-500 mt-0.5">يمكنك مناقشة المستند، تعديل التلخيص، أو طلب جداول وبيانات</p>
+          </div>
+
+          <!-- خيارات سجل المحادثة -->
+          <div class="flex items-center gap-1">
+            <button onclick="clearChatMessages()" title="تصفير المحادثة" class="p-1.5 rounded-lg text-warm-400 hover:text-warm-700 hover:bg-warm-100 text-xs transition-colors">
+              🗑️
+            </button>
+            <button onclick="exportChatTranscript()" title="تصدير تفريغ المحادثة" class="p-1.5 rounded-lg text-warm-400 hover:text-warm-700 hover:bg-warm-100 text-xs transition-colors">
+              💾
+            </button>
+          </div>
+        </div>
+
+        <!-- رسائل المحادثة (Messages Stream) -->
+        <div id="chatMessagesStream" class="flex-1 overflow-y-auto custom-scroll space-y-3.5 my-3 pl-1 pr-1 text-xs sm:text-sm">
+          <!-- رسالة ترحيبية أولية -->
+          <div class="bg-parchment border border-borderWarm text-warm-800 p-3.5 rounded-2xl rounded-tr-none leading-relaxed text-xs">
+            👋 مرحباً بك! أنا مساعدك الذكي المتصل بهذا المستند وملخصه.
+            <br><br>
+            بمجرد إتمام التلخيص، يمكنك أن تطلب مني:
+            <ul class="list-disc list-inside mt-2 space-y-1 text-warm-600">
+              <li>تعديل التلخيص وحذف أو إضافة أجزاء معينة.</li>
+              <li>استخراج البيانات الإحصائية في جدول Markdown منظم.</li>
+              <li>استخراج خطوات العمل والمسؤوليات (Action Items).</li>
+              <li>تبسيط لغة التلخيص أو صياغتها للمبتدئين.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- أزرار الإجراءات المقترحة السريعة (Quick Action Chips) -->
+        <div id="quickActionsContainer" class="flex items-center gap-1.5 overflow-x-auto hide-scrollbar pb-2 pt-1 border-t border-borderWarm">
+          <button onclick="sendQuickPrompt('لخص الفكرة في 3 نقاط محددة')" class="whitespace-nowrap px-2.5 py-1 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-700 text-[11px] font-medium transition-colors border border-borderWarm">
+            📌 3 نقاط رئيسية
+          </button>
+          <button onclick="sendQuickPrompt('استخرج الأرقام والإحصائيات في جدول')" class="whitespace-nowrap px-2.5 py-1 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-700 text-[11px] font-medium transition-colors border border-borderWarm">
+            📊 جدول أرقام
+          </button>
+          <button onclick="sendQuickPrompt('ما هي أهم التوصيات والقرارات؟')" class="whitespace-nowrap px-2.5 py-1 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-700 text-[11px] font-medium transition-colors border border-borderWarm">
+            🎯 التوصيات
+          </button>
+          <button onclick="sendQuickPrompt('بسط الأسلوب ليكون مناسباً لغير المتخصصين')" class="whitespace-nowrap px-2.5 py-1 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-700 text-[11px] font-medium transition-colors border border-borderWarm">
+            🌱 تبسيط
+          </button>
+        </div>
+
+        <!-- صندوق كتابة وإرسال الرسائل -->
+        <div class="pt-2 border-t border-borderWarm flex items-center gap-2">
+          <input type="text" id="chatInputMessage" placeholder="اسأل عن المستند أو اطلب تعديلاً للملخص..." class="flex-1 bg-parchment border border-borderWarm text-warm-800 text-xs sm:text-sm rounded-2xl px-4 py-3 focus:outline-none focus:border-terracotta transition-colors placeholder:text-warm-400" onkeydown="if(event.key === 'Enter') handleSendChatMessage()">
+          
+          <button id="sendChatBtn" onclick="handleSendChatMessage()" class="bg-warm-800 hover:bg-warm-900 text-white w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-soft flex-shrink-0 disabled:opacity-50">
+            <span class="transform rotate-180">➤</span>
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- نافذة مودال لإعادة توليد التلخيص (Regenerate Modal) -->
+  <div id="regenerateModal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-borderWarm rounded-3xl max-w-md w-full p-6 shadow-warm">
+      <h3 class="text-base font-bold text-warm-800 mb-2">إعادة توليد التلخيص</h3>
+      <p class="text-xs text-warm-600 mb-4">يمكنك اختيار نمط جديد أو إضافة تعليمات مخصصة وسيقوم النموذج بإعادة صياغة التلخيص دون الحاجة لإعادة رفع الملف.</p>
+
+      <div class="space-y-3 mb-5">
+        <div>
+          <label class="block text-xs font-semibold text-warm-700 mb-1">النمط الجديد:</label>
+          <select id="modalModeSelect" class="w-full bg-parchment border border-borderWarm text-warm-800 text-xs rounded-xl p-2.5 focus:outline-none">
+            <option value="executive">ملخص تنفيذي</option>
+            <option value="detailed">ملخص تحليلي مفصل</option>
+            <option value="bullets">نقاط سريعة</option>
+            <option value="academic">ملخص أكاديمي</option>
+            <option value="actionable">خطة عمل ومهام</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-warm-700 mb-1">تعليمات إضافية:</label>
+          <input type="text" id="modalInstructionsInput" placeholder="أضف أي تفضيل خاص..." class="w-full bg-parchment border border-borderWarm text-warm-800 text-xs rounded-xl p-2.5 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2">
+        <button onclick="closeRegenerateModal()" class="px-4 py-2 rounded-xl text-warm-600 hover:bg-warm-100 text-xs font-medium">إلغاء</button>
+        <button onclick="executeRegenerateSummary()" class="px-4 py-2 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white text-xs font-bold shadow-soft">إعادة التوليد الآن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- تذييل الصفحة (Footer) -->
+  <footer class="mt-8 border-t border-borderWarm bg-warm-50 py-4 text-center text-xs text-warm-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>منصة التلخيص الذكية والدردشة التفاعلية للمستندات الضخمة © 2026</p>
+      <p class="font-mono text-[11px] text-warm-400">Powered by Gemini 3.5 Flash Lite & 3.8 Flash</p>
+    </div>
+  </footer>
+
+  <!-- منطق التطبيق التفاعلي (Frontend Logic) -->
+  <script>
+    // حالة التطبيق العامة
+    const appState = {
+      activeSessionId: null,
+      currentSummary: '',
+      revisionCount: 1,
+      selectedFile: null,
+      isSummarizing: false,
+      isChatting: false,
+    };
+
+    // عناصر واجهة المستخدم المتكررة
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const dropZoneEmpty = document.getElementById('dropZoneEmpty');
+    const dropZoneSelected = document.getElementById('dropZoneSelected');
+    const selectedFileName = document.getElementById('selectedFileName');
+    const selectedFileSize = document.getElementById('selectedFileSize');
+    const uploadProgressContainer = document.getElementById('uploadProgressContainer');
+    const uploadProgressBar = document.getElementById('uploadProgressBar');
+    const uploadProgressPercent = document.getElementById('uploadProgressPercent');
+    const startSummarizeBtn = document.getElementById('startSummarizeBtn');
+    const summaryContentArea = document.getElementById('summaryContentArea');
+    const activeSessionBanner = document.getElementById('activeSessionBanner');
+    const chatMessagesStream = document.getElementById('chatMessagesStream');
+    const chatInputMessage = document.getElementById('chatInputMessage');
+    const sendChatBtn = document.getElementById('sendChatBtn');
+
+    // تهيئة منطقة السحب والإفلات
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-terracotta', 'bg-terracotta-light/30');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-terracotta', 'bg-terracotta-light/30');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-terracotta', 'bg-terracotta-light/30');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFileSelected(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleFileSelected(e.target.files[0]);
+      }
+    });
+
+    function handleFileSelected(file) {
+      // فحص الحجم المسموح به (400 ميغابايت كحد أقصى)
+      const maxBytes = 400 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        showToast('حجم الملف يتجاوز الحد الأقصى المسموح به (400 ميغابايت).', 'error');
+        return;
+      }
+
+      appState.selectedFile = file;
+      selectedFileName.textContent = file.name;
+      selectedFileSize.textContent = formatBytes(file.size);
+
+      dropZoneEmpty.classList.add('hidden');
+      dropZoneSelected.classList.remove('hidden');
+    }
+
+    function clearSelectedFile(e) {
+      if (e) e.stopPropagation();
+      appState.selectedFile = null;
+      fileInput.value = '';
+      dropZoneEmpty.classList.remove('hidden');
+      dropZoneSelected.classList.add('hidden');
+    }
+
+    // بدء عملية رفع وتلخيص المستند
+    async function handleStartProcess() {
+      if (!appState.selectedFile) {
+        showToast('يرجى اختيار ملف لرفعه أولاً.', 'warn');
+        return;
+      }
+
+      if (appState.isSummarizing) return;
+
+      const model = document.getElementById('headerModelSelect').value;
+      const mode = document.getElementById('summaryModeSelect').value;
+      const customTitle = document.getElementById('customTitleInput').value.trim();
+      const customInstructions = document.getElementById('customInstructions').value.trim();
+
+      const formData = new FormData();
+      formData.append('file', appState.selectedFile);
+      formData.append('model', model);
+      formData.append('mode', mode);
+      if (customTitle) formData.append('title', customTitle);
+      if (customInstructions) formData.append('customInstructions', customInstructions);
+
+      // تحديث حالة الواجهة
+      setSummarizingUI(true);
+      uploadProgressContainer.classList.remove('hidden');
+      updateProgress(15, 'جارٍ رفع المستند إلى خادم الذاكرة...');
+
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/v1/summarize', true);
+
+        // مراقبة تقدم الرفع الفعلي
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 60); // 60% للرفع
+            updateProgress(percentComplete, `تم رفع ${formatBytes(event.loaded)} من ${formatBytes(event.total)}...`);
+          }
+        };
+
+        xhr.onload = async () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            updateProgress(90, 'اكتمل الرفع السحابي، جارٍ التلخيص الدقيق عبر Gemini...');
+            const response = JSON.parse(xhr.responseText);
+
+            if (response.success) {
+              updateProgress(100, 'اكتمل التحليل بنجاح!');
+              setTimeout(() => {
+                uploadProgressContainer.classList.add('hidden');
+              }, 1000);
+
+              // تحديث حالة التطبيق
+              appState.activeSessionId = response.sessionId;
+              appState.currentSummary = response.summary.content;
+              appState.revisionCount = 1;
+
+              // تحديث الواجهة
+              renderSummaryContent(response.summary.content);
+              updateSessionBanner(response.document, response.summary);
+              showToast('تم تلخيص المستند بنجاح!', 'success');
+
+              // إضافة رسالة نظام في الشات
+              appendChatMessage('assistant', `✅ تم تلخيص المستند **${response.document.title || response.document.originalName}** بنجاح بنمط (${response.summary.mode}). أنا الآن مستعد لمناقشة التفاصيل أو إجراء أي تعديل!`);
+            } else {
+              throw new Error(response.error || 'فشلت معالجة المستند.');
+            }
+          } else {
+            let errorMsg = 'حدث خطأ أثناء معالجة المستند.';
+            try {
+              const errData = JSON.parse(xhr.responseText);
+              errorMsg = errData.error || errorMsg;
+            } catch (_) {}
+            throw new Error(errorMsg);
+          }
+        };
+
+        xhr.onerror = () => {
+          throw new Error('فشل الاتصال بالخادم أثناء رفع الملف.');
+        };
+
+        xhr.send(formData);
+      } catch (err) {
+        console.error(err);
+        showToast(err.message, 'error');
+        uploadProgressContainer.classList.add('hidden');
+      } finally {
+        setSummarizingUI(false);
+      }
+    }
+
+    function updateProgress(percent, statusText) {
+      uploadProgressBar.style.width = `${percent}%`;
+      uploadProgressPercent.textContent = `${percent}%`;
+      document.getElementById('uploadProgressText').textContent = statusText;
+    }
+
+    function setSummarizingUI(isBusy) {
+      appState.isSummarizing = isBusy;
+      startSummarizeBtn.disabled = isBusy;
+      if (isBusy) {
+        startSummarizeBtn.innerHTML = `<span>جارٍ التحليل السحابي...</span> <span class="animate-spin">⏳</span>`;
+      } else {
+        startSummarizeBtn.innerHTML = `<span>بدء الرفع والتحليل الذكي</span> <span>⚡</span>`;
+      }
+    }
+
+    function renderSummaryContent(content) {
+      summaryContentArea.innerHTML = '';
+      const textNode = document.createElement('div');
+      textNode.className = 'font-sans leading-relaxed text-warm-800';
+      textNode.textContent = content;
+      summaryContentArea.appendChild(textNode);
+
+      document.getElementById('summaryFooterMeta').classList.remove('hidden');
+      document.getElementById('metaModelUsed').textContent = `النموذج: ${document.getElementById('headerModelSelect').value}`;
+      document.getElementById('metaGenerationTime').textContent = `تاريخ التوليد: ${new Date().toLocaleTimeString('ar-SA')}`;
+    }
+
+    function updateSessionBanner(doc, summary) {
+      activeSessionBanner.classList.remove('hidden');
+      document.getElementById('bannerFileName').textContent = doc.title || doc.originalName;
+      document.getElementById('bannerFileSize').textContent = doc.fileSizeFormatted || 'حجم غير محدد';
+      document.getElementById('bannerMimeType').textContent = (doc.mimeType || 'PDF').split('/')[1]?.toUpperCase() || 'DOC';
+      document.getElementById('bannerRevisionCount').textContent = appState.revisionCount;
+    }
+
+    // إرسال رسالة في الشات بوت
+    async function handleSendChatMessage() {
+      const text = chatInputMessage.value.trim();
+      if (!text) return;
+
+      if (!appState.activeSessionId) {
+        showToast('يرجى رفع وتلخيص مستند أولاً لبدء المحادثة.', 'warn');
+        return;
+      }
+
+      if (appState.isChatting) return;
+
+      // إضافة رسالة المستخدم في الشاشة
+      appendChatMessage('user', text);
+      chatInputMessage.value = '';
+      setChattingUI(true);
+
+      const model = document.getElementById('headerModelSelect').value;
+
+      try {
+        const response = await fetch(`/api/v1/chat/${appState.activeSessionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            model: model,
+          }),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.error || 'فشلت معالجة الرسالة.');
+        }
+
+        // إضافة رد المساعد
+        appendChatMessage('assistant', data.message.content, data.message.intent);
+
+      } catch (err) {
+        console.error(err);
+        appendChatMessage('assistant', `⚠️ تعذر استلام الرد: ${err.message}`);
+      } finally {
+        setChattingUI(false);
+        chatInputMessage.focus();
+      }
+    }
+
+    function sendQuickPrompt(promptText) {
+      chatInputMessage.value = promptText;
+      handleSendChatMessage();
+    }
+
+    function setChattingUI(isBusy) {
+      appState.isChatting = isBusy;
+      sendChatBtn.disabled = isBusy;
+      chatInputMessage.disabled = isBusy;
+    }
+
+    function appendChatMessage(role, content, intent = null) {
+      const isUser = role === 'user';
+      const msgWrapper = document.createElement('div');
+      msgWrapper.className = `flex flex-col ${isUser ? 'items-start' : 'items-end'} transition-all`;
+
+      const bubble = document.createElement('div');
+      if (isUser) {
+        bubble.className = 'bg-terracotta text-white px-4 py-2.5 rounded-2xl rounded-tr-none max-w-[88%] text-xs sm:text-sm leading-relaxed shadow-soft';
+      } else {
+        bubble.className = 'bg-parchment border border-borderWarm text-warm-800 px-4 py-3 rounded-2xl rounded-tl-none max-w-[92%] text-xs sm:text-sm leading-relaxed shadow-soft whitespace-pre-wrap';
+      }
+
+      bubble.textContent = content;
+      msgWrapper.appendChild(bubble);
+
+      // إذا كانت الرسالة تتضمن مقترح تعديل للملخص، نظهر زر "اعتماد التعديل"
+      if (!isUser && (intent === 'modify_summary' || content.includes('زر اعتماد التعديل') || content.includes('التعديل المطلوب'))) {
+        const applyBtn = document.createElement('button');
+        applyBtn.className = 'mt-2 text-xs font-bold text-terracotta hover:text-white bg-terracotta-light hover:bg-terracotta border border-terracotta/30 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow-soft';
+        applyBtn.innerHTML = '<span>✅ اعتماد هذا التعديل في الملخص الرئيسي</span>';
+        applyBtn.onclick = () => applyRevisionToSummary(content);
+        msgWrapper.appendChild(applyBtn);
+      }
+
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'text-[10px] text-warm-400 mt-1 px-1';
+      timeSpan.textContent = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+      msgWrapper.appendChild(timeSpan);
+
+      chatMessagesStream.appendChild(msgWrapper);
+      chatMessagesStream.scrollTop = chatMessagesStream.scrollHeight;
+    }
+
+    // اعتماد تعديل مقترح وتحديث الملخص الرئيسي
+    async function applyRevisionToSummary(revisedText) {
+      if (!appState.activeSessionId) return;
+
+      try {
+        const response = await fetch(`/api/v1/chat/${appState.activeSessionId}/apply-revision`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            revisedSummary: revisedText,
+            revisionNote: 'تعديل مقترح من المحادثة التفاعلية',
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          appState.currentSummary = revisedText;
+          appState.revisionCount = data.version;
+          renderSummaryContent(revisedText);
+          document.getElementById('bannerRevisionCount').textContent = data.version;
+          showToast('تم بنجاح تحديث الملخص الرئيسي المعتمد!', 'success');
+        } else {
+          throw new Error(data.error);
+        }
+      } catch (err) {
+        showToast(`فشل اعتماد التعديل: ${err.message}`, 'error');
+      }
+    }
+
+    // نسخ الملخص إلى الحافظة
+    function copySummaryToClipboard() {
+      if (!appState.currentSummary) {
+        showToast('لا يوجد ملخص لنسخه.', 'warn');
+        return;
+      }
+      navigator.clipboard.writeText(appState.currentSummary)
+        .then(() => showToast('تم نسخ التلخيص إلى الحافظة!', 'success'))
+        .catch(() => showToast('تعذر النسخ إلى الحافظة.', 'error'));
+    }
+
+    // تصدير ملف الملخص (Markdown / Text)
+    function exportSummaryFile(format) {
+      if (!appState.activeSessionId) {
+        showToast('يرجى تلخيص ملف أولاً قبل التصدير.', 'warn');
+        return;
+      }
+      window.location.href = `/api/v1/summarize/${appState.activeSessionId}/export?format=${format}`;
+    }
+
+    // تصدير تفريغ المحادثة
+    function exportChatTranscript() {
+      if (!appState.activeSessionId) {
+        showToast('لا توجد محادثة نشطة للتصدير.', 'warn');
+        return;
+      }
+      window.location.href = `/api/v1/chat/${appState.activeSessionId}/export?format=markdown`;
+    }
+
+    // تصفير المحادثة
+    async function clearChatMessages() {
+      if (!appState.activeSessionId) {
+        chatMessagesStream.innerHTML = '';
+        return;
+      }
+
+      if (!confirm('هل أنت متأكد من تصفير سجل المحادثة؟')) return;
+
+      try {
+        const res = await fetch(`/api/v1/chat/${appState.activeSessionId}/clear`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          chatMessagesStream.innerHTML = '';
+          appendChatMessage('assistant', 'تم تصفير سجل المحادثة. يمكنك بدء نقاش جديد حول المستند.');
+          showToast('تم مسح سجل المحادثة بنجاح.', 'success');
+        }
+      } catch (err) {
+        showToast('تعذر تصفير سجل المحادثة.', 'error');
+      }
+    }
+
+    // إنهاء الجلسة وحذف الموارد السحابية
+    async function terminateCurrentSession() {
+      if (!appState.activeSessionId) return;
+
+      if (!confirm('هل ترغب بإنهاء الجلسة وحذف الملف السحابي المرتبط بها؟')) return;
+
+      try {
+        const res = await fetch(`/api/v1/sessions/${appState.activeSessionId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          appState.activeSessionId = null;
+          appState.currentSummary = '';
+          activeSessionBanner.classList.add('hidden');
+          summaryContentArea.innerHTML = `
+            <div class="h-64 flex flex-col items-center justify-center text-center text-warm-400 p-6">
+              <span class="text-4xl mb-3">📑</span>
+              <p class="font-medium text-sm text-warm-600">تم إنهاء الجلسة وحذف الملف بنجاح</p>
+            </div>
+          `;
+          chatMessagesStream.innerHTML = '';
+          showToast('تم إنهاء الجلسة وحذف المستند من السحابة.', 'success');
+        }
+      } catch (err) {
+        showToast('تعذر إنهاء الجلسة.', 'error');
+      }
+    }
+
+    // نافذة مودال إعادة التوليد
+    function promptRegenerateSummary() {
+      if (!appState.activeSessionId) {
+        showToast('يرجى تلخيص ملف أولاً.', 'warn');
+        return;
+      }
+      document.getElementById('regenerateModal').classList.remove('hidden');
+    }
+
+    function closeRegenerateModal() {
+      document.getElementById('regenerateModal').classList.add('hidden');
+    }
+
+    async function executeRegenerateSummary() {
+      const mode = document.getElementById('modalModeSelect').value;
+      const customInstructions = document.getElementById('modalInstructionsInput').value.trim();
+      const model = document.getElementById('headerModelSelect').value;
+
+      closeRegenerateModal();
+      setSummarizingUI(true);
+      showToast('جارٍ إعادة صياغة الملخص بالنمط الجديد...', 'info');
+
+      try {
+        const res = await fetch(`/api/v1/summarize/${appState.activeSessionId}/regenerate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode, customInstructions, model }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          appState.currentSummary = data.summary.content;
+          renderSummaryContent(data.summary.content);
+          showToast('تمت إعادة توليد التلخيص بنجاح!', 'success');
+        } else {
+          throw new Error(data.error);
+        }
+      } catch (err) {
+        showToast(`فشلت إعادة التوليد: ${err.message}`, 'error');
+      } finally {
+        setSummarizingUI(false);
+      }
+    }
+
+    // دالة مساعدة لإظهار إشعارات التنبيه (Toast)
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toastNotification');
+      const msg = document.getElementById('toastMessage');
+      const icon = document.getElementById('toastIcon');
+
+      msg.textContent = message;
+
+      if (type === 'success') {
+        toast.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform translate-y-0 opacity-100 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-warm border text-xs font-semibold bg-emerald-50 border-emerald-200 text-emerald-800';
+        icon.textContent = '✅';
+      } else if (type === 'error') {
+        toast.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform translate-y-0 opacity-100 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-warm border text-xs font-semibold bg-red-50 border-red-200 text-red-800';
+        icon.textContent = '❌';
+      } else if (type === 'warn') {
+        toast.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform translate-y-0 opacity-100 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-warm border text-xs font-semibold bg-amber-50 border-amber-200 text-amber-800';
+        icon.textContent = '⚠️';
+      } else {
+        toast.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform translate-y-0 opacity-100 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-warm border text-xs font-semibold bg-warm-100 border-borderWarm text-warm-800';
+        icon.textContent = 'ℹ️';
+      }
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    function formatBytes(bytes, decimals = 1) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+  </script>
+</body>
+</html>
